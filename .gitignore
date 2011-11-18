@@ -1,0 +1,5 @@
+*.pyc
+*~
+build
+dist
+django_cached_field.egg-info
