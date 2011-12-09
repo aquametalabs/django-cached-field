@@ -55,4 +55,4 @@ In views.py:
 
 * All my tests are in the project I pulled this out of, but based on models therein. I don't have experience making tests for standalone django libraries...
 * Custom-named calculation/flag/&c.-methods are stubbed in, but not done.
-* I should probably make sure I'm covering all the fields, not just the ones I've ever cared about.
+* I should probably make sure I'm covering all the field types, not just the ones I've ever cared about.
