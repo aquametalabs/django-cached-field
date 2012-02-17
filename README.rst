@@ -72,7 +72,7 @@ new value every morning at cron'o'clock? That flag had best be stale
 by cron'o'one. Do you calculate weight based on the sum of all
 associated pigeons? Hook into the pigeons landing. And takeoff. And
 everything that changes an individual pigeon's weight. As Abraham
-Lincolc said, "There are only two hard problems in programming:
+Lincoln said, "There are only two hard problems in programming:
 naming, cache invalidation and off-by-one errors."
 
 Installation
