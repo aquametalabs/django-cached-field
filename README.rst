@@ -22,8 +22,8 @@ Say you have a slow method on one of your models::
 Ugh; too slow. Let's cache that. We'll want a few tools. `Celery
 <http://celeryproject.org/>` with `django-celery
 <http://github.com/ask/django-celery>` will need to be set up and
-humming along smoothly. Then we'll add in our cached field and rename
-our method appropriately::
+humming along smoothly. Then we'll add in our cached field, inherit
+from the model mixin and rename our method appropriately::
 
     from django_cached_field import CachedIntegerField, ModelWithCachedFields
 
@@ -115,11 +115,17 @@ Caveats
 -------
 
 * Race condition if you flag a field as stale in a db transaction that takes longer to complete than the celery job takes to be called.
+* All ORM methods (e.g. order_by, filter) need to use cached_FIELD.
+* recalculate_FIELD uses .update(cached_FIELD= to set the value.
+* flag_FIELD_as_stale uses .update, as well.
 
 TODO
 ----
 
 * All my tests are in the project I pulled this out of, but based on models therein. I don't have experience making tests for standalone django libraries. Someone wanna point me to a tutorial?
 * Argument-passed, custom-named calculat/flag/&c.-methods are stubbed in, but not done.
+* Recalculation task will not adapt to recalculation_needed_field_name option
 * I should probably make sure I'm covering all the field types, not just the ones I've ever cared about.
 * The docs are a lie: do the south integration.
+* See if I can dispense with the need to inherit from ModelWithCachedFields explicitly (contribute_to_class?).
+* Finish docs.

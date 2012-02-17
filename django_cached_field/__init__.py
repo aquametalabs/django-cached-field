@@ -71,10 +71,6 @@ class CachedFieldMixin(object):
       `cached_field_name' to specify a field name other than cached_FIELD
       `recalculation_needed_field_name' to specify a field name other than
         FIELD_recalculation_needed
-    Caveats:
-      * recalculate_ uses .update(cached_FIELD= to set the value
-      * flag_as_stale uses .update, as well
-      * recalculation task will not adapt to recalculation_needed_field_name option
     """
 
     def __init__(self, *args, **kwargs):
