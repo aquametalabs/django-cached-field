@@ -12,7 +12,7 @@ def offload_cache_recalculation(app, model, obj_id, **kwargs):
         obj = model.objects.get(pk=obj_id)
         for f in model._meta.fields:
             match = recalc_needed_re.search(f.name)
-            if match:
+            if match and getattr(obj, f.name):
                 basename = match.groups()[0]
                 getattr(obj, "recalculate_%s" % basename)()
     except model.DoesNotExist:
