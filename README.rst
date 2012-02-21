@@ -4,8 +4,7 @@ Django Cached Field
 Introduction
 ------------
 
-Using Django ORM and Celery, keep expensive-to-calculate attributes
-up-to-date.
+Using Django ORM and Celery, cache expensive-to-calculate attributes.
 
 Example
 -------
@@ -13,7 +12,7 @@ Example
 Say you have a slow method on one of your models::
 
     class Lamppost(models.Model):
-
+        # ...
         @property
         def slow_full_name(self):
             sleep(30)
@@ -28,6 +27,7 @@ from the model mixin and rename our method appropriately::
     from django_cached_field import CachedIntegerField, ModelWithCachedFields
 
     class Lamppost(models.Model, ModelWithCachedFields):
+        # ...
         slow_full_name = CachedTextField(null=True)
 
         def calculate_slow_full_name(self):
@@ -48,12 +48,12 @@ seconds the first time it gets called for a given record, but from
 then on, it'll be nigh instant. Of course, at this point, it will
 never change after that first call.
 
-The remaining important piece of the puzzle is to invalidate our
-cache. Thoses constituent fields are probably changed in some views.py
-(this could be more clever about noticing if the relevant values are
-updated)::
+The remaining important piece of the puzzle is to invalidate our cache
+using ``flag_slow_full_name_as_stale``. It is probably changed in some
+views.py (this example code could be more clever about noticing if the
+relevant values are updated)::
 
-    @render_to("lamppost/edit.html")
+    @render_to('lamppost/edit.html')
     def edit(request, lamppost_id):
         lamppost = Lamppost.objects.get(pk=lamppost_id)
         if request.METHOD == 'POST':
@@ -61,11 +61,13 @@ updated)::
             if form.is_valid():
                 form.save()
                 form.instance.flag_slow_full_name_as_stale()
+                return HttpResponseRedirect(
+                    reverse('lamppost_view', args=(lamppost.pk,)))
         else:
             form = LamppostForm()
         return {'form': form, 'lamppost': lamppost}
 
-**This is the hardest part as the developer!** Caching requires you
+**This is the hardest part as the developer.** Caching requires you
 hunt down every place the value could be changed and calling that
 ``flag_slow_full_name_as_stale`` method. Is country assigned a random
 new value every morning at cron'o'clock? That flag had best be stale
@@ -82,13 +84,15 @@ You can make things easy on yourself::
 
     pip install django-cached-field
 
-Or, for a manual installation, you can clone the repo and install it using python and setup.py::
+Or, for a manual installation, you can clone the repo and install it
+using python and setup.py::
 
     git clone git://github.com/aquameta/django-cached-field.git
     cd django-cached-field/
     python setup.py install
 
-Tested with django 1.3.1, celery 2.3.1, django-celery 2.3.3.
+Tested with django 1.3.1, celery 2.3.1, and django-celery 2.3.3, but I
+would entertain other minimums if someone was willing to test them.
 
 Configuration
 -------------
@@ -101,23 +105,24 @@ sure it's a registered app, make sure celery sees its tasks file::
 
 One change is optional: whether recalculation should happen when
 flagged as stale (default) or be left to the next time the attribute
-is accessed. This is useful for testing environments where you don't
-care that your cached values are invalid. Note that in this situation,
-you wouldn't need celery. ::
+is accessed. This is useful for optimizing testing environments where
+you don't care that your cached values are invalid or that the expense
+of calculation is applied to a user. Note that, in this situation, you
+wouldn't need celery. ::
 
    CACHED_FIELD_EAGER_RECALCULATION = True # or False for testing environments
 
 This is a global option, so individual exceptions should instead be
-handled by passing the *and_recalculate* argument to the
-*flag_FIELD_as_stale* call.
+handled by passing the ``and_recalculate`` argument to the
+``flag_FIELD_as_stale`` call.
 
 Caveats
 -------
 
 * Race condition if you flag a field as stale in a db transaction that takes longer to complete than the celery job takes to be called.
-* All ORM methods (e.g. order_by, filter) need to use cached_FIELD.
-* recalculate_FIELD uses .update(cached_FIELD= to set the value.
-* flag_FIELD_as_stale uses .update, as well.
+* All ORM methods (e.g. ``order_by``, ``filter``) can only access this data through ``cached_FIELD``.
+* ``recalculate_FIELD`` uses ``.update(cached_FIELD=`` to set the value.
+* ``flag_FIELD_as_stale`` uses ``.update``, as well.
 
 TODO
 ----
