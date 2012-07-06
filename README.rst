@@ -134,3 +134,4 @@ TODO
 * The docs are a lie: do the south integration.
 * See if I can dispense with the need to inherit from ModelWithCachedFields explicitly (contribute_to_class?).
 * Finish docs.
+* Fix race condition with https://github.com/davehughes/django-transaction-signals ?
