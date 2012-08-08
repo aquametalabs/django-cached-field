@@ -123,6 +123,7 @@ Caveats
 * All ORM methods (e.g. ``order_by``, ``filter``) can only access this data through ``cached_FIELD``.
 * ``recalculate_FIELD`` uses ``.update(cached_FIELD=`` to set the value.
 * ``flag_FIELD_as_stale`` uses ``.update``, as well.
+* This may break if you try to add this mixin to a field class that multiply-inherits (I'm currently grabbing an arbitrary, non-CachedFieldMixin class and making the real field with it).
 
 TODO
 ----
