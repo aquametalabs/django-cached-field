@@ -8,10 +8,9 @@ class ModelWithCachedFields(object):
 
     def _flag_FIELD_as_stale(self, field=None, and_recalculate=None, commit=True):
         if and_recalculate is None:
-            try:
+            and_recalculate = True
+            if hasattr(settings, 'CACHED_FIELD_EAGER_RECALCULATION'):
                 and_recalculate = settings.CACHED_FIELD_EAGER_RECALCULATION
-            except AttributeError:
-                and_recalculate = True
         if not getattr(self, field.recalculation_needed_field_name):
             setattr(self, field.recalculation_needed_field_name, True)
             kwargs = {field.recalculation_needed_field_name: True}
