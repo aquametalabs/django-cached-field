@@ -124,6 +124,7 @@ Caveats
 * ``recalculate_FIELD`` uses ``.update(cached_FIELD=`` to set the value.
 * ``flag_FIELD_as_stale`` uses ``.update``, as well.
 * This may break if you try to add this mixin to a field class that multiply-inherits (I'm currently grabbing an arbitrary, non-CachedFieldMixin class and making the real field with it).
+* The FIELD_recalculation_needed field is accessed by regex in at least one place, so problems will result from user fields that match the same pattern.
 
 TODO
 ----
@@ -131,6 +132,7 @@ TODO
 * All my tests are in the project I pulled this out of, but based on models therein. I don't have experience making tests for standalone django libraries. Someone wanna point me to a tutorial?
 * Argument-passed, custom-named calculat/flag/&c.-methods are stubbed in, but not done.
 * Recalculation task will not adapt to recalculation_needed_field_name option
+* Replace use of _recalculation_needed regex with class-level registry of cached fields.
 * I should probably make sure I'm covering all the field types, not just the ones I've ever cared about.
 * The docs are a lie: do the south integration.
 * See if I can dispense with the need to inherit from ModelWithCachedFields explicitly (contribute_to_class?).
