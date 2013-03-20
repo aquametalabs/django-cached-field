@@ -37,7 +37,7 @@ class ModelWithCachedFields(object):
     def _get_FIELD(self, field=None):
         val = getattr(self, field.cached_field_name)
         flag = getattr(self, field.recalculation_needed_field_name)
-        if val is None or flag is True:
+        if flag is True:
             self._recalculate_FIELD(field=field)
             val = getattr(self, field.cached_field_name)
         return val
@@ -86,7 +86,7 @@ class CachedFieldMixin(object):
         setattr(cls, self.cached_field_name, proper_field)
         proper_field.contribute_to_class(cls, self.cached_field_name)
 
-        flag_field = models.BooleanField(default=False)
+        flag_field = models.BooleanField(default=True)
         setattr(cls, self.recalculation_needed_field_name, flag_field)
         flag_field.contribute_to_class(cls, self.recalculation_needed_field_name)
 
@@ -115,4 +115,6 @@ class CachedBooleanField(CachedFieldMixin, models.BooleanField):
 class CachedDecimalField(CachedFieldMixin, models.DecimalField):
     pass
 class CachedDateField(CachedFieldMixin, models.DateField):
+    pass
+class CachedDateTimeField(CachedFieldMixin, models.DateTimeField):
     pass
