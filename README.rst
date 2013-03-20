@@ -136,3 +136,4 @@ TODO
 * See if I can dispense with the need to inherit from ModelWithCachedFields explicitly (contribute_to_class?).
 * Finish docs.
 * Fix race condition with https://github.com/davehughes/django-transaction-signals ?
+* Or maybe with https://github.com/chrisdoble/django-celery-transactions ?
