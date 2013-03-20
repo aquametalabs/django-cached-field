@@ -110,6 +110,8 @@ class CachedFloatField(CachedFieldMixin, models.FloatField):
     pass
 class CachedCharField(CachedFieldMixin, models.CharField):
     pass
+class CachedTextField(CachedFieldMixin, models.TextField):
+    pass
 class CachedBooleanField(CachedFieldMixin, models.BooleanField):
     pass
 class CachedDecimalField(CachedFieldMixin, models.DecimalField):
