@@ -1,0 +1,4 @@
+1.0
+-------
+
+* Uses celery>=3 logging. Not backwards compatible (use v0.2 for previous celeries).

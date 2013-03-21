@@ -1,8 +1,7 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '0.2'
-
+version = '1.1'
 
 setup(name='django-cached-field',
       version=version,
@@ -19,8 +18,8 @@ setup(name='django-cached-field',
       zip_safe=False,
       install_requires=[
         'django>=1.3.1',
-        'celery>=2.3.1',
-        'django-celery>=2.3.3'
+        'celery>=3.0',
+        'django-celery>=3.0',
       ],
       entry_points="""
       # -*- Entry points: -*-
