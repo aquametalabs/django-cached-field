@@ -21,12 +21,12 @@ Say you have a slow method on one of your models::
 Ugh; too slow. Let's cache that. We'll want a few tools. `Celery
 <http://celeryproject.org/>` with `django-celery
 <http://github.com/ask/django-celery>` will need to be set up and
-humming along smoothly. Then we'll add in our cached field, inherit
-from the model mixin and rename our method appropriately::
+humming along smoothly. Then we'll add in our cached field and rename
+our method appropriately::
 
-    from django_cached_field import CachedIntegerField, ModelWithCachedFields
+    from django_cached_field import CachedIntegerField
 
-    class Lamppost(models.Model, ModelWithCachedFields):
+    class Lamppost(models.Model):
         # ...
         slow_full_name = CachedTextField(null=True)
 
@@ -35,7 +35,8 @@ from the model mixin and rename our method appropriately::
             return 'The %s %s of %s' % (self.weight, self.first_name, self.country)
 
 (Yeah, ``calculate_`` is just a convention. I clearly haven't given up
-the rails ghost...)
+the rails ghost, but you can pass in your own method name with
+``calculation_method_name``.)
 
 Next, migrate your db schema to include the new cached field using
 south, or roll your own. Note that two fields will be added to this
@@ -119,9 +120,9 @@ handled by passing the ``and_recalculate`` argument to the
 Caveats
 -------
 
-* Race condition if you flag a field as stale in a db transaction that takes longer to complete than the celery job takes to be called.
-* All ORM methods (e.g. ``order_by``, ``filter``) can only access this data through ``cached_FIELD``.
-* ``recalculate_FIELD`` uses ``.update(cached_FIELD=`` to set the value.
+* Race condition if you flag a field as stale in a db transaction that takes longer to complete than the celery job takes to be called (so commit your transactions before invalidating the cache).
+* All ORM methods (e.g. ``order_by``, ``filter``) can only access this field through ``cached_FIELD``.
+* ``recalculate_FIELD`` uses ``.update(cached_FIELD=`` to set the value. Don't expect ``.save`` to be called.
 * ``flag_FIELD_as_stale`` uses ``.update``, as well.
 * This may break if you try to add this mixin to a field class that multiply-inherits (I'm currently grabbing an arbitrary, non-CachedFieldMixin class and making the real field with it).
 * The FIELD_recalculation_needed field is accessed by regex in at least one place, so problems will result from user fields that match the same pattern.
@@ -130,12 +131,7 @@ TODO
 ----
 
 * All my tests are in the project I pulled this out of, but based on models therein. I don't have experience making tests for standalone django libraries. Someone wanna point me to a tutorial?
-* Argument-passed, custom-named calculat/flag/&c.-methods are stubbed in, but not done.
 * Recalculation task will not adapt to recalculation_needed_field_name option
 * Replace use of _recalculation_needed regex with class-level registry of cached fields.
-* I should probably make sure I'm covering all the field types, not just the ones I've ever cared about.
-* The docs are a lie: do the south integration.
-* See if I can dispense with the need to inherit from ModelWithCachedFields explicitly (contribute_to_class?).
-* Finish docs.
 * Fix race condition with https://github.com/davehughes/django-transaction-signals ?
 * Or maybe with https://github.com/chrisdoble/django-celery-transactions ?
