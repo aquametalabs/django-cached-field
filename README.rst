@@ -6,6 +6,45 @@ Introduction
 
 Using Django ORM and Celery, cache expensive-to-calculate attributes.
 
+Installation
+------------
+
+You can make things easy on yourself::
+
+    pip install django-cached-field
+
+Or, for a manual installation, you can clone the repo and install it
+using python and setup.py::
+
+    git clone git://github.com/aquameta/django-cached-field.git
+    cd django-cached-field/
+    python setup.py install
+
+Tested with django 1.3.1, celery 2.3.1, and django-celery 2.3.3, but I
+would entertain other minimums if someone was willing to test them.
+
+Configuration
+-------------
+
+Two settings changes are pretty much required for things to work: make
+sure it's a registered app, make sure celery sees its tasks file::
+
+   INSTALLED_APPS += ['django_cached_field',]
+   CELERY_IMPORTS += ['django_cached_field.tasks',]
+
+One change is optional: whether recalculation should happen when
+flagged as stale (default) or be left to the next time the attribute
+is accessed. This is useful for optimizing testing environments where
+you don't care that your cached values are invalid or that the expense
+of calculation is applied to a user. Note that, in this situation, you
+wouldn't need celery. ::
+
+   CACHED_FIELD_EAGER_RECALCULATION = True # or False for testing environments
+
+This is a global option, so individual exceptions should instead be
+handled by passing the ``and_recalculate`` argument to the
+``flag_FIELD_as_stale`` call.
+
 Example
 -------
 
@@ -83,8 +122,8 @@ Lincoln said, "There are only two hard problems in programming:
 naming, cache invalidation and off-by-one errors."
 
 One possible invalidation scheme you might want to use is expiration
-dates. We know the pigeons on our lamppost are going to have die and
-turn into ghosts, right::
+dates. We know the pigeons on our lamppost are going to die and turn
+into ghosts, right::
 
     class Pigeon(models.Model):
         death_day = models.DateField()
@@ -106,45 +145,6 @@ note of their death as they land::
 Or maybe you only want the cache to ever be valid for 30 minutes, lest
 **They** have too easy a time of tracking your thoughts. So, yeah, you
 get the idea.
-
-Installation
-------------
-
-You can make things easy on yourself::
-
-    pip install django-cached-field
-
-Or, for a manual installation, you can clone the repo and install it
-using python and setup.py::
-
-    git clone git://github.com/aquameta/django-cached-field.git
-    cd django-cached-field/
-    python setup.py install
-
-Tested with django 1.3.1, celery 2.3.1, and django-celery 2.3.3, but I
-would entertain other minimums if someone was willing to test them.
-
-Configuration
--------------
-
-Two settings changes are pretty much required for things to work: make
-sure it's a registered app, make sure celery sees its tasks file::
-
-   INSTALLED_APPS += ['django_cached_field',]
-   CELERY_IMPORTS += ['django_cached_field.tasks',]
-
-One change is optional: whether recalculation should happen when
-flagged as stale (default) or be left to the next time the attribute
-is accessed. This is useful for optimizing testing environments where
-you don't care that your cached values are invalid or that the expense
-of calculation is applied to a user. Note that, in this situation, you
-wouldn't need celery. ::
-
-   CACHED_FIELD_EAGER_RECALCULATION = True # or False for testing environments
-
-This is a global option, so individual exceptions should instead be
-handled by passing the ``and_recalculate`` argument to the
-``flag_FIELD_as_stale`` call.
 
 Caveats
 -------
