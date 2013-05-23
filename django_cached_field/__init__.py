@@ -32,6 +32,11 @@ def _recalculate_FIELD(self, field=None, commit=True):
     setattr(self, field.recalculation_needed_field_name, False)
     kwargs = {field.cached_field_name: val,
               field.recalculation_needed_field_name: False}
+    if field.temporal_triggers:
+        expires = getattr(self, field.expiration_field_name)
+        if expires and expires < datetime.now():
+            setattr(self, field.expiration_field_name, None)
+            kwargs[field.expiration_field_name] = None
     if commit:
         type(self).objects.filter(pk=self.pk).update(**kwargs)
     else:

@@ -1,3 +1,9 @@
+1.2.1
+-------
+
+* Bugfix: expirations need to be unset to prevent unnecessary
+  recalculation.
+
 1.2
 -------
 
