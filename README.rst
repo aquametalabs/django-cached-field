@@ -9,16 +9,18 @@ Using Django ORM and Celery, cache expensive-to-calculate attributes.
 Example
 -------
 
-Say you have a slow method on one of your models::
+Say you have a CTO who believes everything belongs in the database and
+a slow method on one of your models::
 
     class Lamppost(models.Model):
         # ...
         @property
         def slow_full_name(self):
-            sleep(30)
+            ackermann(5, 2)
             return 'The %s %s of %s' % (self.weight, self.first_name, self.country)
 
-Ugh; too slow. Let's cache that. We'll want a few tools. `Celery
+Ugh; too slow. Let's cache that (but not with, say, a dedicated
+caching system). We'll want a few tools. `Celery
 <http://celeryproject.org/>` with `django-celery
 <http://github.com/ask/django-celery>` will need to be set up and
 humming along smoothly. Then we'll add in our cached field and rename
@@ -31,23 +33,25 @@ our method appropriately::
         slow_full_name = CachedTextField(null=True)
 
         def calculate_slow_full_name(self):
-            sleep(30)
+            ackermann(5, 2)
             return 'The %s %s of %s' % (self.weight, self.first_name, self.country)
 
-(Yeah, ``calculate_`` is just a convention. I clearly haven't given up
-the rails ghost, but you can pass in your own method name with
+(Yeah, ``calculate_*`` is just a convention. I clearly haven't given
+up the rails ghost, but you can pass in your own method name with
 ``calculation_method_name``.)
 
 Next, migrate your db schema to include the new cached field using
-south, or roll your own. Note that two fields will be added to this
-table, ``cached_slow_full_name`` of type *text* and
+south, or roll your own. Note that at least two fields will be added
+to this table, ``cached_slow_full_name`` of type *text*,
 ``slow_full_name_recalculation_needed`` of type *boolean*, probably
-defaulting to true.
+defaulting to true, and possibly ``slow_full_name_expires_after`` of
+type *datetime*, if we pass ``temporal_triggers=True`` into the field
+declaration (more on that later).
 
-Already that's kinda better. ``lamppost.slow_full_name`` may take 30
-seconds the first time it gets called for a given record, but from
-then on, it'll be nigh instant. Of course, at this point, it will
-never change after that first call.
+Already that's kinda better. ``lamppost.slow_full_name`` may take a
+while the first time it gets called for a given record, but from then
+on, it'll be nigh instant. Of course, at this point, it will never
+change after that first call.
 
 The remaining important piece of the puzzle is to invalidate our cache
 using ``flag_slow_full_name_as_stale``. It is probably changed in some
@@ -77,6 +81,31 @@ associated pigeons? Hook into the pigeons landing. And takeoff. And
 everything that changes an individual pigeon's weight. As Abraham
 Lincoln said, "There are only two hard problems in programming:
 naming, cache invalidation and off-by-one errors."
+
+One possible invalidation scheme you might want to use is expiration
+dates. We know the pigeons on our lamppost are going to have die and
+turn into ghosts, right::
+
+    class Pigeon(models.Model):
+        death_day = models.DateField()
+
+        def die(self):
+            self.weight = 0
+            self.save()
+
+And rather than bother the pigeon-death-handling system, we'll take
+note of their death as they land::
+
+    class Lamppost(models.Model):
+        #...
+        def notice_pigeon_landing(self, pigeon):
+            earliest = self.pigeon_set.all().aggregate(
+                models.Min('death_date'))['death_date']
+            self.expire_slow_full_name_after(earliest)
+
+Or maybe you only want the cache to ever be valid for 30 minutes, lest
+**They** have too easy a time of tracking your thoughts. So, yeah, you
+get the idea.
 
 Installation
 ------------

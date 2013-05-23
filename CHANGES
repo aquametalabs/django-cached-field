@@ -1,3 +1,9 @@
+1.2
+-------
+
+* Accept ``temporal_triggers`` argument and provide control structures
+  for expiration of values.
+
 1.1
 -------
 
