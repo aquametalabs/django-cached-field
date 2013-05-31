@@ -1,3 +1,9 @@
+1.2.2
+-------
+
+* Bugfix: recalculation should not depend on the previously set value
+  of the recalculation flag.
+
 1.2.1
 -------
 

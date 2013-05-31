@@ -13,13 +13,13 @@ def _flag_FIELD_as_stale(self, field=None, and_recalculate=None, commit=True):
     if not getattr(self, field.recalculation_needed_field_name):
         setattr(self, field.recalculation_needed_field_name, True)
         kwargs = {field.recalculation_needed_field_name: True}
-        if commit:
-            type(self).objects.filter(pk=self.pk).update(**kwargs)
-            if and_recalculate:
-                self.trigger_cache_recalculation()
-        else:
-            return kwargs
-    return {}
+    else:
+        kwargs = {}  # This won't trigger an actual UPDATE.
+    if commit:
+        type(self).objects.filter(pk=self.pk).update(**kwargs)
+        if and_recalculate:
+            self.trigger_cache_recalculation()
+    return kwargs
 
 
 def _expire_FIELD_after(self, when=None, field=None):
