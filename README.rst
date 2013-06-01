@@ -159,6 +159,7 @@ Caveats
 TODO
 ----
 
+* Figure out if we can turn temporal_triggers into a celery job that happens once at the given time.
 * All my tests are in the project I pulled this out of, but based on models therein. I don't have experience making tests for standalone django libraries. Someone wanna point me to a tutorial?
 * Recalculation task will not adapt to recalculation_needed_field_name option
 * Replace use of _recalculation_needed regex with class-level registry of cached fields.
