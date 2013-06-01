@@ -87,12 +87,14 @@ class CachedFieldMixin(object):
         .update or .trigger_cache_recalculation
       * recalculates automatically if FIELD is accessed and
         cached_FIELD is None or FIELD_recalculation_needed is True
+      * possibly recalculates automatically after a specified datetime
       * calculates its value in a user-defined calculate_FIELD(), which
         should return the value
     Init args:
       `calculation_method_name' to specify a method other than calculate_FIELD
       `cached_field_name' to specify a field name other than cached_FIELD
       `recalculation_needed_field_name' to specify a field name other than
+      `temporal_triggers' to turn on expirations
         FIELD_recalculation_needed
     """
 
