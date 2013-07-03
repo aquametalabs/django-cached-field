@@ -1,3 +1,8 @@
+1.2.3
+------
+
+* Bugfix: set the expires_after_field on the object when setting the expiration.
+
 1.2.2
 -------
 

@@ -23,6 +23,7 @@ def _flag_FIELD_as_stale(self, field=None, and_recalculate=None, commit=True):
 
 
 def _expire_FIELD_after(self, when=None, field=None):
+    setattr(self, field.expiration_field_name, when)
     type(self).objects.filter(pk=self.pk).update(**{field.expiration_field_name: when})
 
 
