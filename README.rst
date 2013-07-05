@@ -6,78 +6,6 @@ Introduction
 
 Using Django ORM and Celery, cache expensive-to-calculate attributes.
 
-Example
--------
-
-Say you have a slow method on one of your models::
-
-    class Lamppost(models.Model):
-        # ...
-        @property
-        def slow_full_name(self):
-            sleep(30)
-            return 'The %s %s of %s' % (self.weight, self.first_name, self.country)
-
-Ugh; too slow. Let's cache that. We'll want a few tools. `Celery
-<http://celeryproject.org/>` with `django-celery
-<http://github.com/ask/django-celery>` will need to be set up and
-humming along smoothly. Then we'll add in our cached field and rename
-our method appropriately::
-
-    from django_cached_field import CachedIntegerField
-
-    class Lamppost(models.Model):
-        # ...
-        slow_full_name = CachedTextField(null=True)
-
-        def calculate_slow_full_name(self):
-            sleep(30)
-            return 'The %s %s of %s' % (self.weight, self.first_name, self.country)
-
-(Yeah, ``calculate_`` is just a convention. I clearly haven't given up
-the rails ghost, but you can pass in your own method name with
-``calculation_method_name``.)
-
-Next, migrate your db schema to include the new cached field using
-south, or roll your own. Note that two fields will be added to this
-table, ``cached_slow_full_name`` of type *text* and
-``slow_full_name_recalculation_needed`` of type *boolean*, probably
-defaulting to true.
-
-Already that's kinda better. ``lamppost.slow_full_name`` may take 30
-seconds the first time it gets called for a given record, but from
-then on, it'll be nigh instant. Of course, at this point, it will
-never change after that first call.
-
-The remaining important piece of the puzzle is to invalidate our cache
-using ``flag_slow_full_name_as_stale``. It is probably changed in some
-views.py (this example code could be more clever about noticing if the
-relevant values are updated)::
-
-    @render_to('lamppost/edit.html')
-    def edit(request, lamppost_id):
-        lamppost = Lamppost.objects.get(pk=lamppost_id)
-        if request.METHOD == 'POST':
-            form = LamppostForm(request.POST)
-            if form.is_valid():
-                form.save()
-                form.instance.flag_slow_full_name_as_stale()
-                return HttpResponseRedirect(
-                    reverse('lamppost_view', args=(lamppost.pk,)))
-        else:
-            form = LamppostForm()
-        return {'form': form, 'lamppost': lamppost}
-
-**This is the hardest part as the developer.** Caching requires you
-hunt down every place the value could be changed and calling that
-``flag_slow_full_name_as_stale`` method. Is country assigned a random
-new value every morning at cron'o'clock? That flag had best be stale
-by cron'o'one. Do you calculate weight based on the sum of all
-associated pigeons? Hook into the pigeons landing. And takeoff. And
-everything that changes an individual pigeon's weight. As Abraham
-Lincoln said, "There are only two hard problems in programming:
-naming, cache invalidation and off-by-one errors."
-
 Installation
 ------------
 
@@ -117,6 +45,107 @@ This is a global option, so individual exceptions should instead be
 handled by passing the ``and_recalculate`` argument to the
 ``flag_FIELD_as_stale`` call.
 
+Example
+-------
+
+Say you have a CTO who believes everything belongs in the database and
+a slow method on one of your models::
+
+    class Lamppost(models.Model):
+        # ...
+        @property
+        def slow_full_name(self):
+            ackermann(5, 2)
+            return 'The %s %s of %s' % (self.weight, self.first_name, self.country)
+
+Ugh; too slow. Let's cache that (but not with, say, a dedicated
+caching system). We'll want a few tools. `Celery
+<http://celeryproject.org/>` with `django-celery
+<http://github.com/ask/django-celery>` will need to be set up and
+humming along smoothly. Then we'll add in our cached field and rename
+our method appropriately::
+
+    from django_cached_field import CachedIntegerField
+
+    class Lamppost(models.Model):
+        # ...
+        slow_full_name = CachedTextField(null=True)
+
+        def calculate_slow_full_name(self):
+            ackermann(5, 2)
+            return 'The %s %s of %s' % (self.weight, self.first_name, self.country)
+
+(Yeah, ``calculate_*`` is just a convention. I clearly haven't given
+up the rails ghost, but you can pass in your own method name with
+``calculation_method_name``.)
+
+Next, migrate your db schema to include the new cached field using
+south, or roll your own. Note that at least two fields will be added
+to this table, ``cached_slow_full_name`` of type *text*,
+``slow_full_name_recalculation_needed`` of type *boolean*, probably
+defaulting to true, and possibly ``slow_full_name_expires_after`` of
+type *datetime*, if we pass ``temporal_triggers=True`` into the field
+declaration (more on that later).
+
+Already that's kinda better. ``lamppost.slow_full_name`` may take a
+while the first time it gets called for a given record, but from then
+on, it'll be nigh instant. Of course, at this point, it will never
+change after that first call.
+
+The remaining important piece of the puzzle is to invalidate our cache
+using ``flag_slow_full_name_as_stale``. It is probably changed in some
+views.py (this example code could be more clever about noticing if the
+relevant values are updated)::
+
+    @render_to('lamppost/edit.html')
+    def edit(request, lamppost_id):
+        lamppost = Lamppost.objects.get(pk=lamppost_id)
+        if request.METHOD == 'POST':
+            form = LamppostForm(request.POST)
+            if form.is_valid():
+                form.save()
+                form.instance.flag_slow_full_name_as_stale()
+                return HttpResponseRedirect(
+                    reverse('lamppost_view', args=(lamppost.pk,)))
+        else:
+            form = LamppostForm()
+        return {'form': form, 'lamppost': lamppost}
+
+**This is the hardest part as the developer.** Caching requires you
+hunt down every place the value could be changed and calling that
+``flag_slow_full_name_as_stale`` method. Is country assigned a random
+new value every morning at cron'o'clock? That flag had best be stale
+by cron'o'one. Do you calculate weight based on the sum of all
+associated pigeons? Hook into the pigeons landing. And takeoff. And
+everything that changes an individual pigeon's weight. As Abraham
+Lincoln said, "There are only two hard problems in programming:
+naming, cache invalidation and off-by-one errors."
+
+One possible invalidation scheme you might want to use is expiration
+dates. We know the pigeons on our lamppost are going to die and turn
+into ghosts, right::
+
+    class Pigeon(models.Model):
+        death_day = models.DateField()
+
+        def die(self):
+            self.weight = 0
+            self.save()
+
+And rather than bother the pigeon-death-handling system, we'll take
+note of their death as they land::
+
+    class Lamppost(models.Model):
+        #...
+        def notice_pigeon_landing(self, pigeon):
+            earliest = self.pigeon_set.all().aggregate(
+                models.Min('death_date'))['death_date']
+            self.expire_slow_full_name_after(earliest)
+
+Or maybe you only want the cache to ever be valid for 30 minutes, lest
+**They** have too easy a time of tracking your thoughts. So, yeah, you
+get the idea.
+
 Caveats
 -------
 
@@ -130,6 +159,7 @@ Caveats
 TODO
 ----
 
+* Figure out if we can turn temporal_triggers into a celery job that happens once at the given time.
 * All my tests are in the project I pulled this out of, but based on models therein. I don't have experience making tests for standalone django libraries. Someone wanna point me to a tutorial?
 * Recalculation task will not adapt to recalculation_needed_field_name option
 * Replace use of _recalculation_needed regex with class-level registry of cached fields.

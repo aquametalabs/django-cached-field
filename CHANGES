@@ -1,3 +1,37 @@
+1.2.4
+------
+
+* Bugfix: cast dates as datetimes before setattr
+
+1.2.3
+------
+
+* Bugfix: set the expires_after_field on the object when setting the expiration.
+
+1.2.2
+-------
+
+* Bugfix: recalculation should not depend on the previously set value
+  of the recalculation flag.
+
+1.2.1
+-------
+
+* Bugfix: expirations need to be unset to prevent unnecessary
+  recalculation.
+
+1.2
+-------
+
+* Accept ``temporal_triggers`` argument and provide control structures
+  for expiration of values.
+
+1.1
+-------
+
+* ModelWithCachedFields mixin no longer required or supported.
+* Lots of small improvements.
+
 1.0
 -------
 

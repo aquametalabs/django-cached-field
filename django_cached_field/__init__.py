@@ -1,3 +1,4 @@
+from datetime import datetime, date
 from django.db import models
 from django.conf import settings
 from django.utils.functional import curry
@@ -9,16 +10,24 @@ def _flag_FIELD_as_stale(self, field=None, and_recalculate=None, commit=True):
         and_recalculate = True
         if hasattr(settings, 'CACHED_FIELD_EAGER_RECALCULATION'):
             and_recalculate = settings.CACHED_FIELD_EAGER_RECALCULATION
+    #:MC: this could be improved by checking the database instead of the object, but doing so would add a query per flag
     if not getattr(self, field.recalculation_needed_field_name):
         setattr(self, field.recalculation_needed_field_name, True)
         kwargs = {field.recalculation_needed_field_name: True}
-        if commit:
-            type(self).objects.filter(pk=self.pk).update(**kwargs)
-            if and_recalculate:
-                self.trigger_cache_recalculation()
-        else:
-            return kwargs
-    return {}
+    else:
+        kwargs = {}  # This won't trigger an actual UPDATE.
+    if commit:
+        type(self).objects.filter(pk=self.pk).update(**kwargs)
+        if and_recalculate:
+            self.trigger_cache_recalculation()
+    return kwargs
+
+
+def _expire_FIELD_after(self, when=None, field=None):
+    if when is not None and isinstance(when, date):
+        when = datetime(when.year, when.month, when.day, 0, 0, 0)
+    setattr(self, field.expiration_field_name, when)
+    type(self).objects.filter(pk=self.pk).update(**{field.expiration_field_name: when})
 
 
 def _recalculate_FIELD(self, field=None, commit=True):
@@ -27,6 +36,11 @@ def _recalculate_FIELD(self, field=None, commit=True):
     setattr(self, field.recalculation_needed_field_name, False)
     kwargs = {field.cached_field_name: val,
               field.recalculation_needed_field_name: False}
+    if field.temporal_triggers:
+        expires = getattr(self, field.expiration_field_name)
+        if expires and expires < datetime.now():
+            setattr(self, field.expiration_field_name, None)
+            kwargs[field.expiration_field_name] = None
     if commit:
         type(self).objects.filter(pk=self.pk).update(**kwargs)
     else:
@@ -36,6 +50,9 @@ def _recalculate_FIELD(self, field=None, commit=True):
 def _get_FIELD(self, field=None):
     val = getattr(self, field.cached_field_name)
     flag = getattr(self, field.recalculation_needed_field_name)
+    if field.temporal_triggers:
+        expiration = getattr(self, field.expiration_field_name)
+        flag = flag or (expiration is not None and expiration < datetime.now())
     if flag is True:
         self._recalculate_FIELD(field=field)
         val = getattr(self, field.cached_field_name)
@@ -51,8 +68,10 @@ def trigger_cache_recalculation(self):
 
 
 def ensure_class_has_cached_field_methods(cls):
+    # :TODO: can this be done with a mixin?
     for func in (trigger_cache_recalculation, _set_FIELD, _get_FIELD,
-                 _recalculate_FIELD, _flag_FIELD_as_stale):
+                 _recalculate_FIELD, _flag_FIELD_as_stale,
+                 _expire_FIELD_after):
         if not hasattr(cls, func.__name__):
             setattr(cls, func.__name__, func)
 
@@ -72,17 +91,23 @@ class CachedFieldMixin(object):
         .update or .trigger_cache_recalculation
       * recalculates automatically if FIELD is accessed and
         cached_FIELD is None or FIELD_recalculation_needed is True
+      * possibly recalculates automatically after a specified datetime
       * calculates its value in a user-defined calculate_FIELD(), which
         should return the value
     Init args:
       `calculation_method_name' to specify a method other than calculate_FIELD
       `cached_field_name' to specify a field name other than cached_FIELD
       `recalculation_needed_field_name' to specify a field name other than
+      `temporal_triggers' to turn on expirations
         FIELD_recalculation_needed
     """
 
     def __init__(self, calculation_method_name=None, cached_field_name=None,
-                 recalculation_needed_field_name=None, *args, **kwargs):
+                 recalculation_needed_field_name=None, temporal_triggers=False,
+                 expiration_field_name=None, *args, **kwargs):
+        self.temporal_triggers = temporal_triggers
+        if expiration_field_name:
+            self.expiration_field_name = expiration_field_name
         if calculation_method_name:
             self.calculation_method_name = calculation_method_name
         if cached_field_name:
@@ -107,6 +132,12 @@ class CachedFieldMixin(object):
         setattr(cls, self.recalculation_needed_field_name, flag_field)
         flag_field.contribute_to_class(cls, self.recalculation_needed_field_name)
 
+        if self.temporal_triggers:
+            setattr(cls, 'expire_%s_after' % self.name, curry(cls._expire_FIELD_after, field=self))
+            expire_field = models.DateTimeField(null=True)
+            setattr(cls, self.expiration_field_name, expire_field)
+            expire_field.contribute_to_class(cls, self.expiration_field_name)
+
         setattr(cls, 'flag_%s_as_stale' % self.name, curry(cls._flag_FIELD_as_stale, field=self))
 
     @property
@@ -120,6 +151,10 @@ class CachedFieldMixin(object):
     @property
     def calculation_method_name(self):
         return 'calculate_%s' % self.name
+
+    @property
+    def expiration_field_name(self):
+        return '%s_expires_after' % self.name
 
 
 class CachedBigIntegerField(CachedFieldMixin, models.BigIntegerField):
