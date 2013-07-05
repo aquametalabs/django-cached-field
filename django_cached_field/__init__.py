@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from django.db import models
 from django.conf import settings
 from django.utils.functional import curry
@@ -23,6 +23,8 @@ def _flag_FIELD_as_stale(self, field=None, and_recalculate=None, commit=True):
 
 
 def _expire_FIELD_after(self, when=None, field=None):
+    if when is not None and isinstance(when, date):
+        when = datetime(when.year, when.month, when.day, 0, 0, 0)
     setattr(self, field.expiration_field_name, when)
     type(self).objects.filter(pk=self.pk).update(**{field.expiration_field_name: when})
 
