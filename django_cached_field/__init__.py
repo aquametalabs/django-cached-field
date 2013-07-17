@@ -24,7 +24,7 @@ def _flag_FIELD_as_stale(self, field=None, and_recalculate=None, commit=True):
 
 
 def _expire_FIELD_after(self, when=None, field=None):
-    if when is not None and isinstance(when, date):
+    if when is not None and not isinstance(when, datetime):
         when = datetime(when.year, when.month, when.day, 0, 0, 0)
     setattr(self, field.expiration_field_name, when)
     type(self).objects.filter(pk=self.pk).update(**{field.expiration_field_name: when})
