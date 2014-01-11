@@ -1,3 +1,8 @@
+1.2.6
+------
+
+* Bugfix: custom-named methods and fields work better if I don't try to set attrs named after methods
+
 1.2.4
 ------
 
