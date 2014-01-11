@@ -107,20 +107,20 @@ class CachedFieldMixin(object):
                  expiration_field_name=None, *args, **kwargs):
         self.temporal_triggers = temporal_triggers
         if expiration_field_name:
-            self.expiration_field_name = expiration_field_name
+            self._expiration_field_name = expiration_field_name
         if calculation_method_name:
-            self.calculation_method_name = calculation_method_name
+            self._calculation_method_name = calculation_method_name
         if cached_field_name:
-            self.cached_field_name = cached_field_name
+            self._cached_field_name = cached_field_name
         if recalculation_needed_field_name:
-            self.recalculation_needed_field_name = recalculation_needed_field_name
+            self._recalculation_needed_field_name = recalculation_needed_field_name
         self.init_args_for_field = args
         self.init_kwargs_for_field = kwargs
 
     def contribute_to_class(self, cls, name):
         ensure_class_has_cached_field_methods(cls)
         self.name = name
-        setattr(cls, 'recalculate_%s' % self.name, curry(cls._recalculate_FIELD, field=self))
+        setattr(cls, 'recalculate_{}'.format(self.name), curry(cls._recalculate_FIELD, field=self))
         setattr(cls, self.name, property(curry(cls._get_FIELD, field=self), curry(cls._set_FIELD, field=self)))
 
         proper_field = (set(type(self).__bases__) - set((CachedFieldMixin,))).pop()  # :MC: ew.
@@ -133,28 +133,32 @@ class CachedFieldMixin(object):
         flag_field.contribute_to_class(cls, self.recalculation_needed_field_name)
 
         if self.temporal_triggers:
-            setattr(cls, 'expire_%s_after' % self.name, curry(cls._expire_FIELD_after, field=self))
+            setattr(cls, 'expire_{}_after'.format(self.name), curry(cls._expire_FIELD_after, field=self))
             expire_field = models.DateTimeField(null=True)
             setattr(cls, self.expiration_field_name, expire_field)
             expire_field.contribute_to_class(cls, self.expiration_field_name)
 
-        setattr(cls, 'flag_%s_as_stale' % self.name, curry(cls._flag_FIELD_as_stale, field=self))
+        setattr(cls, 'flag_{}_as_stale'.format(self.name), curry(cls._flag_FIELD_as_stale, field=self))
 
     @property
     def cached_field_name(self):
-        return 'cached_%s' % self.name
+        return getattr(self, '_cached_field_name',
+                       'cached_{}'.format(self.name))
 
     @property
     def recalculation_needed_field_name(self):
-        return '%s_recalculation_needed' % self.name
+        return getattr(self, '_recalculation_needed_field_name',
+                       '{}_recalculation_needed'.format(self.name))
 
     @property
     def calculation_method_name(self):
-        return 'calculate_%s' % self.name
+        return getattr(self, '_calculation_method_name',
+                       'calculate_{}'.format(self.name))
 
     @property
     def expiration_field_name(self):
-        return '%s_expires_after' % self.name
+        return getattr(self, '_expiration_field_name',
+                       '{}_expires_after'.format(self.name))
 
 
 class CachedBigIntegerField(CachedFieldMixin, models.BigIntegerField):
